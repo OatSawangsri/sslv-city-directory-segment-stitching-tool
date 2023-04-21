@@ -33,6 +33,7 @@ class SegmentStitching:
 
         return self.db_factory.create_connection().connection
 
+    # DB retrieve
     def get_page_range(self):
         query = """
             select
@@ -81,11 +82,9 @@ class SegmentStitching:
 
         return pd.read_sql(query, self.conn, params=params)
 
-    def get_intersection_info(self, col):
-        return self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == col]
-
+    # process intersection
     def is_something(self, in_segment_info,in_col, location):
-        intersect_info = self.get_intersection_info(int(in_col))
+        intersect_info = self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == col]
         
         if(len(intersect_info) == 0):
             return False;
@@ -104,12 +103,10 @@ class SegmentStitching:
     def is_something_below(self, in_segment_info, in_col):
         # check if somethiing below
         return self.is_something(in_segment_info, in_col, BELOW)
-
     
     def is_something_above(self, in_segment_info, in_col):
         # check if somethiing below
         return self.is_something(in_segment_info, in_col, ABOVE)
-
 
     def compare_coord_higher(self, seg_coord, inx_coord):
         # statement = is seg_coord hihger than inx_coord
@@ -124,6 +121,7 @@ class SegmentStitching:
         self.whole_page_intersects = self.get_intersect_page(page)
         return 
 
+    # process command
     def process(self, in_pages=None, in_prior_seg=None):
         pages = None
 
@@ -140,7 +138,6 @@ class SegmentStitching:
             outputList, prior_segment = self._process_page(page, prior_segment)
             print(outputList)
             print("==============================")
-
 
     def _process_page(self, page, prior_segment=None):
 
