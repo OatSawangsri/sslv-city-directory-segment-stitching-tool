@@ -14,24 +14,14 @@ INTERSECTION_TABLE = "CityDir.dbo.CdIntersections"
 class SegmentStitching:
 
     def __init__(self, book):
-
-        self.all_segment = set()
-        self.head_segment = None
-        self.end_segment = None
-        self.segment_window = {min: None, max: None}
-
         self.conn = self.connect()
         self.book = book
-        
 
-        self.prior_segment = None
 
-        
-        #self.all_page_col = self.get_book_info()
+        #self.current_delimiter = None
+        #self.page_range= self.get_page_range()
         #self.current_page_info = self.all_page_col.iloc[0].to_dict() 
-        self.current_page_info = {'ImageKey': 1595, 'minCol': 1, 'maxCol': 5}
-
-        whole_page_segments = None
+        #self.current_page_info = {'ImageKey': 1595, 'minCol': 1, 'maxCol': 5}
         self.whole_page_intersects = None
         
 
@@ -46,7 +36,7 @@ class SegmentStitching:
 
         return self.db_factory.create_connection().connection
 
-    def get_book_info(self):
+    def get_page_range(self):
         query = """
             select
                 MIN(ImageKey) as minKey,
@@ -57,9 +47,10 @@ class SegmentStitching:
         """.format(STREET_SEGMENT_TABLE)
         params = [self.book]
         df = pd.read_sql(query, self.conn, params=params)
-        df['ImageKey'] = df['ImageKey'].astype(int)
+        df['minKey'] = df['minKey'].astype(int)
+        df['maxKey'] = df['maxKey'].astype(int)
         
-        return df
+        return df.iloc[0].to_dict()
 
     def get_page(self, page):
         query = '''
@@ -93,12 +84,12 @@ class SegmentStitching:
 
         return pd.read_sql(query, self.conn, params=params)
 
-    def get_intersection_info(self, col, whole_page_intersects):
-        return whole_page_intersects[whole_page_intersects["ImageColumn"] == col]
+    def get_intersection_info(self, col):
+        return self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == col]
 
-    def is_something_below(self, in_segment_info, in_col, whole_page_intersects):
+    def is_something_below(self, in_segment_info, in_col):
         # check if somethiing below
-        intersect_info = self.get_intersection_info(int(in_col), whole_page_intersects)
+        intersect_info = self.get_intersection_info(int(in_col))
         
         if(len(intersect_info) == 0):
             return False;
@@ -111,9 +102,9 @@ class SegmentStitching:
             return True
         return False
     
-    def is_something_above(self, in_segment_info, in_col, whole_page_intersects):
+    def is_something_above(self, in_segment_info, in_col):
         # check if somethiing below
-        intersect_info = self.get_intersection_info(int(in_col), whole_page_intersects)
+        intersect_info = self.get_intersection_info(int(in_col))
         
         if(len(intersect_info) == 0):
             return False;
@@ -133,23 +124,30 @@ class SegmentStitching:
             return True
         return False
 
-    def process(self, in_pages=None, prior_seg=None):
+    def build_delimiter_collections(self,page):
+        # add as function so we can add in delimiter later
+        self.whole_page_intersects = self.get_intersect_page(page)
+        return 
+
+    def process(self, in_pages=None, in_prior_seg=None):
         pages = None
+
         if(in_pages):
             pages = in_pages
         else:
-            # build list from self.current_page_info
+            pages = self.get_page_range()
             pass
 
-        prior_segment = prior_seg
-        print("staryt")
+
+        # for segment that is prior to the current page (only use for test)
+        prior_segment = in_prior_seg
         for page in range(pages["minKey"], pages["maxKey"] + 1):
-            outputList, prior_segment = self._process_page(page)
+            outputList, prior_segment = self._process_page(page, prior_segment)
             print(outputList)
             print("==============================")
 
 
-    def _process_page(self, page, prior_seg=None):
+    def _process_page(self, page, prior_segment=None):
 
         output = []
         parent_seg = None
@@ -157,11 +155,9 @@ class SegmentStitching:
         whole_page_segments = self.get_page(page)
         if(whole_page_segments.empty):
             return -1
-        
-        whole_page_intersects = self.get_intersect_page(page)
-        #get the frist data set page one col 1
-        if(prior_seg):
-            self.prior_segment = prior_seg
+
+        # build a collection of table to use as delimiter in stitching segment
+        self.build_delimiter_collections(page)
 
         temp = None
         for segment in whole_page_segments.iterrows():
@@ -170,48 +166,35 @@ class SegmentStitching:
             seg_id = segment[1]["ID"]
             seg_col = segment[1]["ImageColumn"]
             # First one to run, No prior query
-            if(self.prior_segment is None):
-                # 
-                
+            if(prior_segment is None):
+                # this is the parent - prior segment have ended
                 parent_seg = seg_id
-                
                 temp = {"parent": parent_seg, "child": parent_seg}
-
-                if(self.is_something_below(seg_obj, seg_col, whole_page_intersects)):
-                    self.prior_segment = None
+                if(self.is_something_below(seg_obj, seg_col)):
+                    prior_segment = None
                 else:
-                    self.prior_segment = seg_id
+                    prior_segment = seg_id
 
             # go to next one
             else:
-
-
-                if(self.is_something_above(seg_obj, seg_col, whole_page_intersects)):
+                if(self.is_something_above(seg_obj, seg_col)):
                     # this is the parent - if something above ( at the begining of the column)
                     parent_seg = seg_id
-                
                     temp = {"parent": parent_seg, "child": parent_seg}
-
-                    if(self.is_something_below(seg_obj, seg_col, whole_page_intersects)):
-                        self.prior_segment = None
+                    if(self.is_something_below(seg_obj, seg_col)):
+                        prior_segment = None
                     else:
-                        self.prior_segment = seg_id
-
+                        prior_segment = seg_id
                 else:
                     # this is a child
-                    parent_seg = self.prior_segment
-
+                    parent_seg = prior_segment
                     temp = {"parent": parent_seg, "child": seg_id}
+                    if(self.is_something_below(seg_obj, seg_col)):
+                        prior_segment = None
 
-                    if(self.is_something_below(seg_obj, seg_col, whole_page_intersects)):
-                        self.prior_segment = None
-
-            
             output.append(temp)
-
         # end For loop
-
-        return output, self.prior_segment
+        return output, prior_segment
 
     def writeKeyPair(self, value):
         # write to csv for now
