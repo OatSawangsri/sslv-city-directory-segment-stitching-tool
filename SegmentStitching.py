@@ -17,10 +17,10 @@ BELOW = -1
 class SegmentStitching:
 
     def __init__(self, book):
-        self.conn = self.connect()
+        
         self.book = book
         self.whole_page_intersects = None
-        
+        self.conn = self.connect()
 
     def connect(self):
         server = 'labdatadev-db.dev.corp.lightboxre.com' 
@@ -31,6 +31,7 @@ class SegmentStitching:
 
         self.db_factory = DatabaseFactory(default_type='mssql', default_host=server, default_database=database, default_username=user, default_password=pswrd)
 
+        # return an acutal connection not the factory 
         return self.db_factory.create_connection().connection
 
     # DB retrieve
@@ -84,7 +85,7 @@ class SegmentStitching:
 
     # process intersection
     def is_something(self, in_segment_info,in_col, location):
-        intersect_info = self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == col]
+        intersect_info = self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == in_col]
         
         if(len(intersect_info) == 0):
             return False;
@@ -122,8 +123,9 @@ class SegmentStitching:
         return 
 
     # process command
-    def process(self, in_pages=None, in_prior_seg=None):
+    def process(self, in_pages=None, summary=False):
         pages = None
+        child_page_list = {}
 
         if(in_pages):
             pages = in_pages
@@ -131,17 +133,27 @@ class SegmentStitching:
             pages = self.get_page_range()
             pass
 
-
-        # for segment that is prior to the current page (only use for test)
-        prior_segment = in_prior_seg
+        # prior_segment - value if parent is in previou page
+        prior_segment = None
         for page in range(pages["minKey"], pages["maxKey"] + 1):
-            outputList, prior_segment = self._process_page(page, prior_segment)
-            print(outputList)
-            print("==============================")
+
+            # process one page at a time 
+            output_df, prior_segment = self._process_page(page, prior_segment)
+
+            # write to db
+            self.write_df_db(output_df)
+
+            # write out summary to csv when require
+            if(summary):
+                # bookkey , imagekye(page number), number of segement in page, number of child in page
+                num_child = len(output_df[output_df['ParentID'] != output_df['ChildID']])
+                print(self.book + ","+  str(page) + ","+  str(len(output_df)) + ","+  str(num_child))
+
+        return child_page_list
 
     def _process_page(self, page, prior_segment=None):
 
-        output = []
+        df_out = pd.DataFrame(columns=['ParentID', 'ChildID'])
         parent_seg = None
         #start at frist page
         whole_page_segments = self.get_page(page)
@@ -153,6 +165,8 @@ class SegmentStitching:
 
         temp = None
         for segment in whole_page_segments.iterrows():
+            #print(segment)
+
             temp = None
             seg_obj = segment[1]
             seg_id = segment[1]["ID"]
@@ -161,33 +175,33 @@ class SegmentStitching:
             if(prior_segment is None):
                 # this is the parent - prior segment have ended
                 parent_seg = seg_id
-                temp = {"parent": parent_seg, "child": parent_seg}
+                df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
                 if(self.is_something_below(seg_obj, seg_col)):
                     prior_segment = None
                 else:
-                    prior_segment = seg_id
+                    prior_segment = seg_obj
 
             # go to next one
             else:
                 if(self.is_something_above(seg_obj, seg_col)):
                     # this is the parent - if something above ( at the begining of the column)
                     parent_seg = seg_id
-                    temp = {"parent": parent_seg, "child": parent_seg}
+                    df_out.loc[len(df_out)] = { 'ParentID':parent_seg, 'ChildID': parent_seg }
                     if(self.is_something_below(seg_obj, seg_col)):
                         prior_segment = None
                     else:
-                        prior_segment = seg_id
+                        prior_segment = seg_obj
                 else:
                     # this is a child
-                    parent_seg = prior_segment
-                    temp = {"parent": parent_seg, "child": seg_id}
+                    parent_seg = prior_segment["ID"]
+                    df_out.loc[len(df_out)] = { 'ParentID':parent_seg, 'ChildID': seg_id}
                     if(self.is_something_below(seg_obj, seg_col)):
                         prior_segment = None
-
-            output.append(temp)
         # end For loop
-        return output, prior_segment
+        return df_out, prior_segment
 
-    def writeKeyPair(self, value):
+
+    def write_df_db(self, df=None):
+        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup ")
         # write to csv for now
         pass

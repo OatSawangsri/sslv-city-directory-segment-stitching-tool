@@ -66,7 +66,7 @@ class DatabaseFactory:
         """
         Writes a dataframe to a database table.
         """
-        print("writing results")
+        #print("writing results")
         if self.default_type == 'mssql':
             conn_str ='DRIVER={SQL Server};SERVER='+self.default_host+';DATABASE='+(database_name or self.default_database)+';ENCRYPT=no;UID='+self.default_username+';PWD='+self.default_password
             conn_url = URL.create("mssql+pyodbc", query={"odbc_connect": conn_str})
