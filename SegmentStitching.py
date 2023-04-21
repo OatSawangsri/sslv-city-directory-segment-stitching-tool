@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import os
+import csv
 
 from utils.database.DatabaseFactory import DatabaseFactory
 
@@ -51,23 +52,22 @@ class SegmentStitching:
         
         return df.iloc[0].to_dict()
 
-    def get_page(self, page):
+    def get_all_page(self):
         query = '''
             select
                 ID, ImageKey , ImageColumn, ListingsExtent, StreetText, CityText
             from
                 {}
             where
-                ImageKey = ?
-                and BookKey = ?
+                BookKey = ?
                 and ListingsExtent is not null
             ORDER BY ID ASC
         '''.format(STREET_SEGMENT_TABLE)
-        params = [str(page), self.book]
+        params = [self.book]
+        self.all_page = pd.read_sql(query, self.conn, params=params)
+        return
 
-        return pd.read_sql(query, self.conn, params=params)
-
-    def get_intersect_page(self, page):
+    def get_all_intersect(self):
         query = '''
             select 
                 ID, ImageKey , ImageColumn, CrossText, CrossExtent 
@@ -75,13 +75,13 @@ class SegmentStitching:
                 {} ci 
             WHERE 
                 BookKey = ?
-                and ImageKey = ?
             ORDER BY ID ASC
         '''.format(INTERSECTION_TABLE)
 
-        params = [self.book, str(page)]
+        params = [self.book]
 
-        return pd.read_sql(query, self.conn, params=params)
+        self.all_intersect = pd.read_sql(query, self.conn, params=params)
+        return 
 
     # process intersection
     def is_something(self, in_segment_info,in_col, location):
@@ -119,48 +119,63 @@ class SegmentStitching:
 
     def build_delimiter_collections(self,page):
         # add as function so we can add in delimiter later
-        self.whole_page_intersects = self.get_intersect_page(page)
+        self.whole_page_intersects = self.all_intersect[self.all_intersect['ImageKey'] == str(page)]
+
         return 
 
     # process command
-    def process(self, in_pages=None, summary=False):
-        pages = None
-        child_page_list = {}
+    def process(self,  summary=False):
 
-        if(in_pages):
-            pages = in_pages
-        else:
-            pages = self.get_page_range()
-            pass
+        # pre populate some class variable
+        pages = self.get_page_range()
+        self.get_all_page()
+        self.get_all_intersect()
 
-        # prior_segment - value if parent is in previou page
+        # empty dataframe for output
+        output_all = pd.DataFrame(columns=['ParentID', 'ChildID'])
+
+        # page counter
+        page_processed = 0 
+
         prior_segment = None
         for page in range(pages["minKey"], pages["maxKey"] + 1):
 
             # process one page at a time 
-            output_df, prior_segment = self._process_page(page, prior_segment)
+            page_df, prior_segment = self._process_page(page, prior_segment)
 
-            # write to db
-            self.write_df_db(output_df)
+            # combine the output into on df
+            output_all = pd.concat([output_all, page_df], ignore_index=True)
+
+            page_processed += 1
 
             # write out summary to csv when require
             if(summary):
                 # bookkey , imagekye(page number), number of segement in page, number of child in page
-                num_child = len(output_df[output_df['ParentID'] != output_df['ChildID']])
-                print(self.book + ","+  str(page) + ","+  str(len(output_df)) + ","+  str(num_child))
+                with open(summary, 'a', newline='') as csvfile:
+                    # Create a CSV writer object
+                    writer = csv.writer(csvfile)
+                    num_child = len(page_df[page_df['ParentID'] != page_df['ChildID']])
+                    writer.writerow([self.book ,  page,  len(page_df), num_child])
 
-        return child_page_list
+        # write to db
+        self.write_df_db(output_all) 
+
+        return page_processed, len(output_all)
 
     def _process_page(self, page, prior_segment=None):
 
+        # create empty df
         df_out = pd.DataFrame(columns=['ParentID', 'ChildID'])
         parent_seg = None
-        #start at frist page
-        whole_page_segments = self.get_page(page)
+
+        # get data chuck baed on page
+        whole_page_segments = self.all_page[self.all_page['ImageKey'] == str(page)]
+ 
+
         if(whole_page_segments.empty):
             return -1
 
-        # build a collection of table to use as delimiter in stitching segment
+        # set a class variable of table to use as delimiter in stitching segment
         self.build_delimiter_collections(page)
 
         temp = None
@@ -201,7 +216,8 @@ class SegmentStitching:
         return df_out, prior_segment
 
 
-    def write_df_db(self, df=None):
-        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup ")
+    def write_df_db(self, df):
+        print("--- write to db: " + str(len(df)) + " records --- ")
+        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup")
         # write to csv for now
         pass
