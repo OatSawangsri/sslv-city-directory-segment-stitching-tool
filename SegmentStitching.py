@@ -10,18 +10,15 @@ from utils.database.DatabaseFactory import DatabaseFactory
 STREET_SEGMENT_TABLE = "CityDir.dbo.CdStreetSegments"
 INTERSECTION_TABLE = "CityDir.dbo.CdIntersections"
 
+ABOVE = 0
+BELOW = -1
+
 
 class SegmentStitching:
 
     def __init__(self, book):
         self.conn = self.connect()
         self.book = book
-
-
-        #self.current_delimiter = None
-        #self.page_range= self.get_page_range()
-        #self.current_page_info = self.all_page_col.iloc[0].to_dict() 
-        #self.current_page_info = {'ImageKey': 1595, 'minCol': 1, 'maxCol': 5}
         self.whole_page_intersects = None
         
 
@@ -87,34 +84,32 @@ class SegmentStitching:
     def get_intersection_info(self, col):
         return self.whole_page_intersects[self.whole_page_intersects["ImageColumn"] == col]
 
-    def is_something_below(self, in_segment_info, in_col):
-        # check if somethiing below
+    def is_something(self, in_segment_info,in_col, location):
         intersect_info = self.get_intersection_info(int(in_col))
         
         if(len(intersect_info) == 0):
             return False;
 
-        inx_coord = eval(intersect_info.iloc[-1].CrossExtent)
+        inx_coord = eval(intersect_info.iloc[location].CrossExtent)
         seg_coord = eval(in_segment_info.ListingsExtent)
 
-        
-        if(self.compare_coord_higher(inx_coord,seg_coord)):
-            return True
+        if(location == ABOVE):
+            if(self.compare_coord_higher(seg_coord,inx_coord)):
+                return True
+        else:
+            if(self.compare_coord_higher(inx_coord,seg_coord)):
+                return True
         return False
+
+    def is_something_below(self, in_segment_info, in_col):
+        # check if somethiing below
+        return self.is_something(in_segment_info, in_col, BELOW)
+
     
     def is_something_above(self, in_segment_info, in_col):
         # check if somethiing below
-        intersect_info = self.get_intersection_info(int(in_col))
-        
-        if(len(intersect_info) == 0):
-            return False;
+        return self.is_something(in_segment_info, in_col, ABOVE)
 
-        inx_coord = eval(intersect_info.iloc[0].CrossExtent)
-        seg_coord = eval(in_segment_info.ListingsExtent)
-
-        if(self.compare_coord_higher(seg_coord,inx_coord)):
-            return True
-        return False
 
     def compare_coord_higher(self, seg_coord, inx_coord):
         # statement = is seg_coord hihger than inx_coord
@@ -199,18 +194,3 @@ class SegmentStitching:
     def writeKeyPair(self, value):
         # write to csv for now
         pass
-
-
-    def testCurrent(self):
-        print("-----Current----------------------------")
-        self.process_page()
-        print("current_page_info" + str(self.current_page_info))
-
-
-    def testState(self):
-        print("-----General----------------------------")
-        print("page_list:")
-        print(self.all_page_col)
-        
-        
-
