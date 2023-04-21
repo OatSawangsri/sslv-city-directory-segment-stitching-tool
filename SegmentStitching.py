@@ -117,12 +117,6 @@ class SegmentStitching:
             return True
         return False
 
-    def build_delimiter_collections(self,page):
-        # add as function so we can add in delimiter later
-        self.whole_page_intersects = self.all_intersect[self.all_intersect['ImageKey'] == str(page)]
-
-        return 
-
     # process command
     def process(self,  summary=False):
 
@@ -170,13 +164,12 @@ class SegmentStitching:
 
         # get data chuck baed on page
         whole_page_segments = self.all_page[self.all_page['ImageKey'] == str(page)]
+        # set a class variable of table to use as delimiter in stitching segment
+        self.whole_page_intersects = self.all_intersect[self.all_intersect['ImageKey'] == str(page)]
  
 
         if(whole_page_segments.empty):
             return -1
-
-        # set a class variable of table to use as delimiter in stitching segment
-        self.build_delimiter_collections(page)
 
         temp = None
         for segment in whole_page_segments.iterrows():
@@ -217,7 +210,6 @@ class SegmentStitching:
 
 
     def write_df_db(self, df):
-        print("--- write to db: " + str(len(df)) + " records --- ")
         self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup")
         # write to csv for now
         pass
