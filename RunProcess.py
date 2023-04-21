@@ -32,19 +32,19 @@ t_book_list_2 = [
 
 
 t_book_list = [
-    "gaatlanta1940atlantacityd",
-  ]
+      "gaatlanta1986polkdirector"
+]
 
 for book in t_book_list:
   file_name = './log/' + book + '_summary.csv'
 
-  print("= START process: " + book + "== ")
+  print("= START process: " + book + "  == ")
 
   ss_a = SegmentStitching(book)
   page_processed, num_records = ss_a.process(summary=file_name)
 
-  print("--- processed: " + str(page_processed) + " pages with " + str(num_records) + " records --")
-  print("====  FINISHED process: " + book + "==========")
+  print("------  processed:   " + str(page_processed) + " pages with   " + str(num_records) + " records --")
+  print("====== FINISHED process: " + book + "  ==========")
 
 
 

@@ -39,8 +39,8 @@ class SegmentStitching:
     def get_page_range(self):
         query = """
             select
-                MIN(ImageKey) as minKey,
-                max(ImageKey) as maxKey
+                MIN(CAST(ImageKey as INT)) as minKey,
+                MAX(CAST(ImageKey as INT)) as maxKey
                 from {}
             where
                 BookKey = ?
@@ -130,8 +130,8 @@ class SegmentStitching:
 
         # page counter
         page_processed = 0 
-
         prior_segment = None
+
         for page in range(pages["minKey"], pages["maxKey"] + 1):
 
             # process one page at a time 
