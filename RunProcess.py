@@ -2,20 +2,6 @@ from SegmentStitching import SegmentStitching
 
 
 t_book_list_2 = [
-  "gaatlanta1940atlantacityd",
-  "gaatlanta1966haines",
-  "gaatlanta1986polkdirector",
-  "gaatlanta1991polkdirectoryco",
-  "gaatlantacity1970haines",
-  "gaatlantacity1991haines",
-  "gaatlantacityan1967haines",
-  "gaatlantacounty1953atlantacitydire",
-  "gaatlantacounty1956atlantacitydire",
-  "gaatlantacounty1960atlantacitydire",
-  "gaatlantasub1960atlantacitydire",
-  "gaatlantasub1966atlantacitydire",
-  "gaatlantasub1970atlantacitydire",
-  "gaatlantasub1975atlantacitydire",
   "gaatlantasub1975hain",
   "gaatlantasub1981hain",
   "gaatlantasub1982atlantacitydire",
@@ -28,14 +14,33 @@ t_book_list_2 = [
   "gaatlantasuburban1979atla",
   "gaatlantasuburban1984polk",
   "gaatlantasuburban1988polk",
+  "gaatlantasub1975atlantacitydire"
 ]
 
-
-t_book_list = [
-      "gaatlanta1986polkdirector"
+t_book_done = [
+  "gaatlanta1940atlantacityd",
+  "gaatlanta1966haines",
+  "gaatlanta1986polkdirector",
+  "gaatlanta1991polkdirectoryco",
+  "gaatlantacity1970haines",
+  "gaatlantacity1991haines",
 ]
 
-for book in t_book_list:
+t_book_list_1 = [
+  "gaatlantacityan1967haines",
+  "gaatlantacounty1953atlantacitydire",
+  "gaatlantacounty1956atlantacitydire",
+  "gaatlantacounty1960atlantacitydire",
+  "gaatlantasub1960atlantacitydire",
+  "gaatlantasub1966atlantacitydire",
+  "gaatlantasub1970atlantacitydire",
+]
+
+t_book_list_ex = [
+    
+]
+
+for book in t_book_list_2:
   file_name = './log/' + book + '_summary.csv'
 
   print("= START process: " + book + "  == ")

@@ -137,6 +137,10 @@ class SegmentStitching:
             # process one page at a time 
             page_df, prior_segment = self._process_page(page, prior_segment)
 
+            # skip advertist page
+            if(page_df is None):
+                continue 
+
             # combine the output into on df
             output_all = pd.concat([output_all, page_df], ignore_index=True)
 
@@ -164,6 +168,8 @@ class SegmentStitching:
 
         # get data chuck baed on page
         whole_page_segments = self.all_page[self.all_page['ImageKey'] == str(page)]
+        if(len(whole_page_segments) == 0):
+            return None, prior_segment
         # set a class variable of table to use as delimiter in stitching segment
         self.whole_page_intersects = self.all_intersect[self.all_intersect['ImageKey'] == str(page)]
  
