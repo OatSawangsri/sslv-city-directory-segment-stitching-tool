@@ -118,10 +118,10 @@ class SegmentStitching:
         return False
 
     # process command
-    def process(self,  summary=False):
+    def process(self, in_page = None, summary=False, write=True):
 
         # pre populate some class variable
-        pages = self.get_page_range()
+        pages = self.get_page_range() if in_page is None else in_page
         self.get_all_page()
         self.get_all_intersect()
 
@@ -156,7 +156,10 @@ class SegmentStitching:
                     writer.writerow([self.book ,  page,  len(page_df), num_child])
 
         # write to db
-        self.write_df_db(output_all) 
+        if(write):
+            self.write_df_db(output_all) 
+        else:
+            print(output_all)
 
         return page_processed, len(output_all)
 
@@ -186,7 +189,14 @@ class SegmentStitching:
             seg_id = segment[1]["ID"]
             seg_col = segment[1]["ImageColumn"]
             # First one to run, No prior query
-            if(prior_segment is None):
+            
+            if(prior_segment is not None and prior_segment["StreetText"] != seg_obj["StreetText"]):
+                # check if prior and current street have the same street name
+                parent_seg = seg_id
+                df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
+                prior_segment = None
+
+            elif(prior_segment is None):  
                 # this is the parent - prior segment have ended
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }

@@ -45,3 +45,27 @@
 - It compare the OCR box that it extract from to determine the position of the box
 
 
+### Need to check
+- total record - 335540
+- record with higher than 5 column distinct - 59086
+```
+select count(*) FROM CdSTD_street_segement_parent_lookup cssspl where ChildID >= ParentID + 5
+```
+
+- does not have intersction -- have street -- 
+  - gaatlantasuburba1970haine
+  - gaatlanta1966haines
+
+- need to look at street "tag" (blue) - city (orange)
+- testing query 
+```
+select CdStreetSegmentsID, BookKey , ImageKey, ImageColumn , HouseText, OccupantText  from CityDir.dbo.CdListings cl where CdStreetSegmentsID = 214285818
+
+
+select CdStreetSegmentsID, OccupantText, HouseText, css.ImageKey, css.ImageColumn, css.BookKey, csspl.ParentID, csspl.ChildID from CityDir.dbo.CdListings cl  
+Inner join (select top 1 * from CdSTD_street_segement_parent_lookup cssspl where ParentID <> ChildID ORDER BY NEWID()) csspl
+on cl.CdStreetSegmentsID = csspl.ChildID 
+Inner join (Select ID, BookKey , ImageKey , ImageColumn, CityText, StreetTextOCR from CityDir.dbo.CdStreetSegments) css
+on css.ID = cl.CdStreetSegmentsID 
+order by cl.ID
+```
