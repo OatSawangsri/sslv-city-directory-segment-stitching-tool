@@ -45,6 +45,10 @@
 - It compare the OCR box that it extract from to determine the position of the box
 
 
+## Note
+- Mulit page segment
+  - http://dcssearchuat:3002/bookKeys/gaatlantasub1975hain/images/86
+
 ### Need to check
 - total record - 335540
 - record with higher than 5 column distinct - 59086

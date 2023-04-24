@@ -37,7 +37,7 @@ t_book_list_3 = [
 ]
 
 
-for book in t_book_list_2:
+for book in t_book_list_1:
   file_name = './log/' + book + '_summary.csv'
 
   print("= START process: " + book + "  == ")

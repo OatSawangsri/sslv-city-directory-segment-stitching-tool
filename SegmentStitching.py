@@ -208,7 +208,6 @@ class SegmentStitching:
                 prior_segment = None
             elif(prior_segment["StreetText"] == seg_obj["StreetText"] and not self.is_coord_equal(prior_segment["StreetExtent"], seg_obj["StreetExtent"])):
                 # check if prior and current street have the same street name
-                print("new")
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
                 prior_segment = None
