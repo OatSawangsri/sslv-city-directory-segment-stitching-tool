@@ -55,7 +55,7 @@ class SegmentStitching:
     def get_all_page(self):
         query = '''
             select
-                ID, ImageKey , ImageColumn, ListingsExtent, StreetText, CityText
+                ID, ImageKey , ImageColumn, ListingsExtent, StreetText, CityText, StreetExtent
             from
                 {}
             where
@@ -117,6 +117,10 @@ class SegmentStitching:
             return True
         return False
 
+    def is_coord_equal(self, coord_1, coord_2):
+        if(coord_1 == coord_2):
+            return True
+        return False
     # process command
     def process(self, in_page = None, summary=False, write=True):
 
@@ -189,14 +193,7 @@ class SegmentStitching:
             seg_id = segment[1]["ID"]
             seg_col = segment[1]["ImageColumn"]
             # First one to run, No prior query
-            
-            if(prior_segment is not None and prior_segment["StreetText"] != seg_obj["StreetText"]):
-                # check if prior and current street have the same street name
-                parent_seg = seg_id
-                df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
-                prior_segment = None
-
-            elif(prior_segment is None):  
+            if(prior_segment is None):  
                 # this is the parent - prior segment have ended
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
@@ -204,6 +201,17 @@ class SegmentStitching:
                     prior_segment = None
                 else:
                     prior_segment = seg_obj
+            elif(prior_segment["StreetText"] != seg_obj["StreetText"]):
+                # check if prior and current street have the same street name
+                parent_seg = seg_id
+                df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
+                prior_segment = None
+            elif(prior_segment["StreetText"] == seg_obj["StreetText"] and not self.is_coord_equal(prior_segment["StreetExtent"], seg_obj["StreetExtent"])):
+                # check if prior and current street have the same street name
+                print("new")
+                parent_seg = seg_id
+                df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
+                prior_segment = None
 
             # go to next one
             else:

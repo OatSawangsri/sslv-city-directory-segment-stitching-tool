@@ -2,7 +2,7 @@ from SegmentStitching import SegmentStitching
 
 
 book = 'gaatlanta1966haines'
-page = {'minKey': 200, 'maxKey': 01}
+page = {'minKey': 201, 'maxKey': 202}
 file_name = './log/' + book + '_summary.csv'
 print("= START process: " + book + "  == ")
 
