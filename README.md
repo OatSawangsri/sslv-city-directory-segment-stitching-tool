@@ -44,6 +44,15 @@
 - It determine the parent-child relation by detect any delimiter between, intersection
 - It compare the OCR box that it extract from to determine the position of the box
 
+### Table Create 
+```
+CREATE TABLE CityDirDev.dbo.CdSTD_street_segement_parent_lookup_v2(
+	ParentID numeric(38,0) NULL,
+	ChildID numeric(38,0) NOT NULL
+);
+CREATE INDEX CdSTD_street_segement_parent_lookup_ParentID_IDX ON CityDirDev.dbo.CdSTD_street_segement_parent_lookup (ParentID);
+ALTER TABLE CityDirDev.dbo.CdSTD_street_segement_parent_lookup ADD CONSTRAINT CdSTD_street_segement_parent_lookup_PK PRIMARY KEY (ChildID);
+```
 
 ## Note
 - Mulit page segment
@@ -62,14 +71,15 @@ select count(*) FROM CdSTD_street_segement_parent_lookup cssspl where ChildID >=
 
 - need to look at street "tag" (blue) - city (orange)
 - testing query 
+  - randome pick where parent and child is different by the degree of 10
+  - queyr for the whole page
 ```
-select CdStreetSegmentsID, BookKey , ImageKey, ImageColumn , HouseText, OccupantText  from CityDir.dbo.CdListings cl where CdStreetSegmentsID = 214285818
+select * from CityDir.dbo.CdStreetSegments css 
+inner join(select top 1 * from CdSTD_street_segement_parent_lookup cssspl where ChildID >= ParentID + 10 ORDER BY NEWID()) ssp
+on ID in (ssp.ParentID,	ssp.ChildID) 
+
+select * from CityDir.dbo.CdStreetSegments css where ImageKey = 92 and BookKey = 'gaatlantasuburba1970haine'
+```
 
 
-select CdStreetSegmentsID, OccupantText, HouseText, css.ImageKey, css.ImageColumn, css.BookKey, csspl.ParentID, csspl.ChildID from CityDir.dbo.CdListings cl  
-Inner join (select top 1 * from CdSTD_street_segement_parent_lookup cssspl where ParentID <> ChildID ORDER BY NEWID()) csspl
-on cl.CdStreetSegmentsID = csspl.ChildID 
-Inner join (Select ID, BookKey , ImageKey , ImageColumn, CityText, StreetTextOCR from CityDir.dbo.CdStreetSegments) css
-on css.ID = cl.CdStreetSegmentsID 
-order by cl.ID
-```
+### Sublisting Enhancment

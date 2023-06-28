@@ -157,7 +157,7 @@ class SegmentStitching:
                     # Create a CSV writer object
                     writer = csv.writer(csvfile)
                     num_child = len(page_df[page_df['ParentID'] != page_df['ChildID']])
-                    writer.writerow([self.book ,  page,  len(page_df), num_child])
+                    writer.writerow([self.book ,  page,  len(page_df), num_child])    
 
         # write to db
         if(write):
@@ -192,6 +192,7 @@ class SegmentStitching:
             seg_obj = segment[1]
             seg_id = segment[1]["ID"]
             seg_col = segment[1]["ImageColumn"]
+
             # First one to run, No prior query
             if(prior_segment is None):  
                 # this is the parent - prior segment have ended
@@ -205,12 +206,25 @@ class SegmentStitching:
                 # check if prior and current street have the same street name
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
-                prior_segment = None
+
+                #
+                #prior_segment = None
+                if(self.is_something_below(seg_obj, seg_col)):
+                    prior_segment = None
+                else:
+                    prior_segment = seg_obj
+                
             elif(prior_segment["StreetText"] == seg_obj["StreetText"] and not self.is_coord_equal(prior_segment["StreetExtent"], seg_obj["StreetExtent"])):
                 # check if prior and current street have the same street name
+
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
-                prior_segment = None
+                #prior_segment = None
+                if(self.is_something_below(seg_obj, seg_col)):
+                    prior_segment = None
+                else:
+                    prior_segment = seg_obj
+                
 
             # go to next one
             else:
@@ -233,6 +247,8 @@ class SegmentStitching:
 
 
     def write_df_db(self, df):
-        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup")
+        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup_v2")
         # write to csv for now
-        pass
+
+        df.to_csv('./test.csv', index=False)
+        #pass
