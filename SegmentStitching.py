@@ -11,6 +11,9 @@ from utils.database.DatabaseFactory import DatabaseFactory
 STREET_SEGMENT_TABLE = "CityDir.dbo.CdStreetSegments"
 INTERSECTION_TABLE = "CityDir.dbo.CdIntersections"
 
+DESTINATION_DB = "CityDirDev"
+DESTINATION_TABLE = "CdSTD_street_segement_parent_lookup_v3"
+
 ABOVE = 0
 BELOW = -1
 
@@ -55,7 +58,7 @@ class SegmentStitching:
     def get_all_page(self):
         query = '''
             select
-                ID, ImageKey , ImageColumn, ListingsExtent, StreetText, CityText, StreetExtent
+                ID, ImageKey , ImageColumn, ListingsExtent, StreetText, CityText, StreetExtent, ZipCodeText
             from
                 {}
             where
@@ -193,16 +196,27 @@ class SegmentStitching:
             seg_id = segment[1]["ID"]
             seg_col = segment[1]["ImageColumn"]
 
+            zip_flag = True
+            if(prior_segment is not None and seg_obj is not None):
+                if(prior_segment['ZipCodeText'] is None and seg_obj['ZipCodeText'] is None):
+                    zip_flag = True
+                elif(prior_segment['ZipCodeText'] == seg_obj['ZipCodeText']):
+                    zip_flag = True
+                else:
+                    zip_flag = False
+                
+
             # First one to run, No prior query
             if(prior_segment is None):  
                 # this is the parent - prior segment have ended
                 parent_seg = seg_id
+                zip_flag = True
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
                 if(self.is_something_below(seg_obj, seg_col)):
                     prior_segment = None
                 else:
                     prior_segment = seg_obj
-            elif(prior_segment["StreetText"] != seg_obj["StreetText"]):
+            elif(prior_segment["StreetText"] != seg_obj["StreetText"] and zip_flag ):
                 # check if prior and current street have the same street name
                 parent_seg = seg_id
                 df_out.loc[len(df_out)] = {'ParentID':parent_seg, 'ChildID': parent_seg }
@@ -214,7 +228,7 @@ class SegmentStitching:
                 else:
                     prior_segment = seg_obj
                 
-            elif(prior_segment["StreetText"] == seg_obj["StreetText"] and not self.is_coord_equal(prior_segment["StreetExtent"], seg_obj["StreetExtent"])):
+            elif(prior_segment["StreetText"] == seg_obj["StreetText"] and not self.is_coord_equal(prior_segment["StreetExtent"], seg_obj["StreetExtent"]) and zip_flag ):
                 # check if prior and current street have the same street name
 
                 parent_seg = seg_id
@@ -227,7 +241,7 @@ class SegmentStitching:
                 
 
             # go to next one
-            else:
+            elif(zip_flag):
                 if(self.is_something_above(seg_obj, seg_col)):
                     # this is the parent - if something above ( at the begining of the column)
                     parent_seg = seg_id
@@ -242,12 +256,16 @@ class SegmentStitching:
                     df_out.loc[len(df_out)] = { 'ParentID':parent_seg, 'ChildID': seg_id}
                     if(self.is_something_below(seg_obj, seg_col)):
                         prior_segment = None
+            else:
+                parent_seg = seg_id
+                df_out.loc[len(df_out)] = { 'ParentID':parent_seg, 'ChildID': seg_id }
+                prior_segment = seg_obj
         # end For loop
         return df_out, prior_segment
 
 
     def write_df_db(self, df):
-        self.db_factory.write_df(df, "CityDirDev", "CdSTD_street_segement_parent_lookup_v2")
+        self.db_factory.write_df(df, DESTINATION_DB, DESTINATION_TABLE)
         # write to csv for now
 
         df.to_csv('./test.csv', index=False)
